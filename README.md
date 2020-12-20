@@ -1,11 +1,11 @@
 # VISCA Controller
  
-This is basic working proof-of-concept PTZ controller for those cameras that use VISCA protocol. Tested on BirdDog P100.
+This is basic PTZ controller for cameras that support VISCA protocol. Tested on BirdDog P100.
 Built with Python + Qt
+
+Edit config.xml to add additional cameras.
 
 ![Visca Controller Screenshot](visca-controller-screenshot.png)
 
 ## Todo
 - Add camera discovery
-- Proper try-catch block
-- To use proper Qt UDPSocket class 

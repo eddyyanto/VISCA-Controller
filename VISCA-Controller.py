@@ -8,95 +8,99 @@
    Project  : VISCA Controller
    Author   : Eddy Yanto
    Created  : 10/12/2020
+   Updated  : 14/12/2020
    Version  : 0.0.1
 
 '''
 
 # Qt related libraries
 from PyQt5 import QtCore, QtGui, QtWidgets, QtNetwork
-import sys, socket
+from PyQt5.QtWidgets import QMessageBox
 from time import sleep
+import sys
+import xml.etree.ElementTree as ET
 
 # Compiled Qt Ui (do not edit the Ui files, as they get overridden during build)
 from MainWindow import Ui_MainWindow
 
 
-camera_ip = '10.100.117.40'
-camera_port = 52381
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # IPv4, UDP
-buffer_size = 1024
+CAMERA_PORT = 52381
 
+SEQUENCE_NUMBER = 1
 
-sequence_number = 1
-camera_on = '81 01 04 00 02 FF'
-camera_off = '81 01 04 00 03 FF'
+CAMERA_ON               = '81 01 04 00 02 FF'
+CAMERA_OFF              = '81 01 04 00 03 FF'
 
-information_display_on = '81 01 7E 01 18 02 FF'
-information_display_off = '81 01 7E 01 18 03 FF'
+INFORMATION_DISPLAY_ON  = '81 01 7E 01 18 02 FF'
+INFORMATION_DISPLAY_OFF = '81 01 7E 01 18 03 FF'
 
-zoom_stop = '81 01 04 07 00 FF'
-zoom_tele = '81 01 04 07 02 FF'
-zoom_wide = '81 01 04 07 03 FF'
-zoom_tele_variable = '81 01 04 07 2p FF' # p=0 (Low) to 7 (High)
-zoom_wide_variable = '81 01 04 07 3p FF' # p=0 (Low) to 7 (High)
-zoom_direct = '81 01 04 47 0p 0q 0r 0s FF' # pqrs: Zoom Position
+ZOOM_STOP               = '81 01 04 07 00 FF'
+ZOOM_TELE               = '81 01 04 07 02 FF'
+ZOOM_WIDE               = '81 01 04 07 03 FF'
+ZOOM_TELE_VARIABLE      = '81 01 04 07 2p FF' # p=0 (Low) to 7 (High)
+ZOOM_WIDE_VARIABLE      = '81 01 04 07 3p FF' # p=0 (Low) to 7 (High)
+ZOOM_DIRECT             = '81 01 04 47 0p 0q 0r 0s FF' # pqrs: Zoom Position
 
-memory_reset = '81 01 04 3F 00 0p FF'
-memory_set = '81 01 04 3F 01 0p FF' # p: Memory number (=0 to F)
-memory_recall = '81 01 04 3F 02 0p FF' # p: Memory number (=0 to F)
+MEMORY_RESET            = '81 01 04 3F 00 0p FF'
+MEMORY_SET              = '81 01 04 3F 01 0p FF' # p: Memory number (=0 to F)
+MEMORY_RECALL           = '81 01 04 3F 02 0p FF' # p: Memory number (=0 to F)
 
 #Pan-tilt Drive
 # VV: Pan speed setting 0x01 (low speed) to 0x18
 # WW: Tilt speed setting 0x01 (low speed) to 0x17
-movement_speed = '03'
-pan_speed = movement_speed
-tilt_speed = movement_speed
+MOVEMENT_SPEED  = '03'
+PAN_SPEED       = MOVEMENT_SPEED
+TILT_SPEED      = MOVEMENT_SPEED
 
 # YYYY: Pan Position DE00 to 2200 (CENTER 0000)
 # ZZZZ: Tilt Position FC00 to 1200 (CENTER 0000)
 #YYYY = '0000'
 #ZZZZ = '0000'
-pan_up = '81 01 06 01 VV WW 03 01 FF'.replace('VV', str(pan_speed)).replace('WW', str(tilt_speed))
-pan_down = '81 01 06 01 VV WW 03 02 FF'.replace('VV', str(pan_speed)).replace('WW', str(tilt_speed))
-pan_left = '81 01 06 01 VV WW 01 03 FF'.replace('VV', str(pan_speed)).replace('WW', str(tilt_speed))
-pan_right = '81 01 06 01 VV WW 02 03 FF'.replace('VV', str(pan_speed)).replace('WW', str(tilt_speed))
-pan_up_left = '81 01 06 01 VV WW 01 01 FF'.replace('VV', str(pan_speed)).replace('WW', str(tilt_speed))
-pan_up_right = '81 01 06 01 VV WW 02 01 FF'.replace('VV', str(pan_speed)).replace('WW', str(tilt_speed))
-pan_down_left = '81 01 06 01 VV WW 01 02 FF'.replace('VV', str(pan_speed)).replace('WW', str(tilt_speed))
-pan_down_right = '81 01 06 01 VV WW 02 02 FF'.replace('VV', str(pan_speed)).replace('WW', str(tilt_speed))
-pan_stop = '81 01 06 01 VV WW 03 03 FF'.replace('VV', str(pan_speed)).replace('WW', str(tilt_speed))
-#pan_absolute_position = '81 01 06 02 VV WW 0Y 0Y 0Y 0Y 0Z 0Z 0Z 0Z FF'.replace('VV', str(VV)) #YYYY[0]
-#pan_relative_position = '81 01 06 03 VV WW 0Y 0Y 0Y 0Y 0Z 0Z 0Z 0Z FF'.replace('VV', str(VV))
-pan_home = '81 01 06 04 FF'
-pan_reset = '81 01 06 05 FF'
-zoom_direct = '81 01 04 47 0p 0q 0r 0s FF' # pqrs: Zoom Position
-zoom_focus_direct = '81 01 04 47 0p 0q 0r 0s 0t 0u 0v 0w FF' # pqrs: Zoom Position  tuvw: Focus Position
+PAN_UP                  = '81 01 06 01 VV WW 03 01 FF'#.replace('VV', str(PAN_SPEED)).replace('WW', str(TILT_SPEED))
+PAN_DOWN                = '81 01 06 01 VV WW 03 02 FF'#.replace('VV', str(PAN_SPEED)).replace('WW', str(TILT_SPEED))
+PAN_LEFT                = '81 01 06 01 VV WW 01 03 FF'#.replace('VV', str(PAN_SPEED)).replace('WW', str(TILT_SPEED))
+PAN_RIGHT               = '81 01 06 01 VV WW 02 03 FF'#.replace('VV', str(PAN_SPEED)).replace('WW', str(TILT_SPEED))
+PAN_UP_LEFT             = '81 01 06 01 VV WW 01 01 FF'#.replace('VV', str(PAN_SPEED)).replace('WW', str(TILT_SPEED))
+PAN_UP_RIGHT            = '81 01 06 01 VV WW 02 01 FF'#.replace('VV', str(PAN_SPEED)).replace('WW', str(TILT_SPEED))
+PAN_DOWN_LEFT           = '81 01 06 01 VV WW 01 02 FF'#.replace('VV', str(PAN_SPEED)).replace('WW', str(TILT_SPEED))
+PAN_DOWN_RIGHT          = '81 01 06 01 VV WW 02 02 FF'#.replace('VV', str(PAN_SPEED)).replace('WW', str(TILT_SPEED))
+PAN_STOP                = '81 01 06 01 VV WW 03 03 FF'#.replace('VV', str(PAN_SPEED)).replace('WW', str(TILT_SPEED))
+PAN_HOME                = '81 01 06 04 FF'
+PAN_RESET               = '81 01 06 05 FF'
+ZOOM_DIRECT             = '81 01 04 47 0p 0q 0r 0s FF' # pqrs: Zoom Position
+ZOOM_FOCUS_DIRECT       = '81 01 04 47 0p 0q 0r 0s 0t 0u 0v 0w FF' # pqrs: Zoom Position  tuvw: Focus Position
 
-inquiry_lens_control = '81 09 7E 7E 00 FF'
-# response: 81 50 0p 0q 0r 0s 0H 0L 0t 0u 0v 0w 00 xx xx FF
-inquiry_camera_control = '81 09 7E 7E 01 FF'
+INQUIRY_LENS_CONTROL    = '81 09 7E 7E 00 FF'
+INQUIRY_CAMERA_CONTROL  = '81 09 7E 7E 01 FF'
 
-focus_stop = '81 01 04 08 00 FF'
-focus_far = '81 01 04 08 02 FF'
-focus_near = '81 01 04 08 03 FF'
-focus_far_variable = '81 01 04 08 2p FF'.replace('p', '7') # 0 low to 7 high
-focus_near_variable = '81 01 04 08 3p FF'.replace('p', '7') # 0 low to 7 high
-focus_direct = '81 01 04 48 0p 0q 0r 0s FF' #.replace('p', ) q, r, s
-focus_auto = '81 01 04 38 02 FF'
-focus_manual = '81 01 04 38 03 FF'
-focus_infinity = '81 01 04 18 02 FF'
+FOCUS_STOP              = '81 01 04 08 00 FF'
+FOCUS_FAR               = '81 01 04 08 02 FF'
+FOCUS_NEAR              = '81 01 04 08 03 FF'
+FOCUS_FAR_VARIABLE      = '81 01 04 08 2p FF'.replace('p', '7') # 0 low to 7 high
+FOCUS_NEAR_VARIABLE     = '81 01 04 08 3p FF'.replace('p', '7') # 0 low to 7 high
+FOCUS_DIRECT            = '81 01 04 48 0p 0q 0r 0s FF' #.replace('p', ) q, r, s
+FOCUS_AUTO              = '81 01 04 38 02 FF'
+FOCUS_MANUAL            = '81 01 04 38 03 FF'
+FOCUS_INFINITY          = '81 01 04 18 02 FF'
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self, *args, obj=None, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
-        self.setFixedSize(960, 480) # get width and height from MainWindow UI
+        self.setFixedSize(960, 480)
 
-        self.btnZoomIn.pressed.connect(self.zoomInPressed)
-        self.btnZoomIn.released.connect(self.zoomInReleased)
-        self.btnZoomOut.pressed.connect(self.zoomOutPressed)
-        self.btnZoomOut.released.connect(self.zoomOutReleased)
+        self.actionAbout.triggered.connect(self.showAbout)
+
+        self.btnZoomTele.pressed.connect(self.zoomTelePressed)
+        self.btnZoomTele.released.connect(self.zoomTeleReleased)
+        self.btnZoomWide.pressed.connect(self.zoomWidePressed)
+        self.btnZoomWide.released.connect(self.zoomWideReleased)
+
+        self.btnFocusFar.pressed.connect(self.focusFarPressed)
+        self.btnFocusFar.released.connect(self.focusFarReleased)
+        self.btnFocusNear.pressed.connect(self.focusNearPressed)
+        self.btnFocusNear.released.connect(self.focusNearReleased)
 
         self.btnNavUp.pressed.connect(self.navUpPressed)
         self.btnNavUp.released.connect(self.navUpReleased)
@@ -132,66 +136,110 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnPreset8.pressed.connect(self.preset8)
         self.btnPreset9.pressed.connect(self.preset9)
 
+        self.sldPanSpeed.sliderReleased.connect(self.panSpeedHandler)
 
-    def zoomInPressed(self):
-        self.send_message(zoom_tele)
+        self.udpSocket = QtNetwork.QUdpSocket(self)
+        self.udpSocket.bind(7001)
+        self.udpSocket.readyRead.connect(self.processPendingDatagrams)
 
-    def zoomInReleased(self):
-        self.send_message(zoom_stop)
 
-    def zoomOutPressed(self):
-        self.send_message(zoom_wide)
+        xmlRoot = ET.parse('config.xml').getroot()
+        for camera in xmlRoot.findall('camera'):
+            camIp = camera.get('ip')
+            self.cmbCameras.addItem(camIp)
 
-    def zoomOutReleased(self):
-        self.send_message(zoom_stop)
+        self.reset_sequence_number_function()
+
+    def processPendingDatagrams(self):
+        while self.udpSocket.hasPendingDatagrams():
+            datagram, host, port = self.udpSocket.readDatagram(self.udpSocket.pendingDatagramSize())
+            print(datagram)
+
+    def showAbout(self):
+       msg = QMessageBox()
+       msg.setIcon(QMessageBox.Information)
+
+       msg.setText("VISCA Controller v0.1\t")
+       msg.setInformativeText("Release: 14/12/2020\nAuthor: Eddy Yanto")
+       msg.setWindowTitle("VISCA Controller")
+       msg.setStandardButtons(QMessageBox.Ok)
+       msg.exec()
+
+    def panSpeedHandler(self):
+        global MOVEMENT_SPEED
+        MOVEMENT_SPEED = self.sldPanSpeed.value()
+
+    def zoomTelePressed(self):
+        self.send_message(ZOOM_TELE)
+
+    def zoomTeleReleased(self):
+        self.send_message(ZOOM_STOP)
+
+    def zoomWidePressed(self):
+        self.send_message(ZOOM_WIDE)
+
+    def zoomWideReleased(self):
+        self.send_message(ZOOM_STOP)
+
+    def focusFarPressed(self):
+        self.send_message(FOCUS_FAR)
+
+    def focusFarReleased(self):
+        self.send_message(FOCUS_STOP)
+
+    def focusNearPressed(self):
+        self.send_message(FOCUS_NEAR)
+
+    def focusNearReleased(self):
+        self.send_message(FOCUS_STOP)
 
     def navUpPressed(self):
-        self.send_message(pan_up)
+        self.send_message(PAN_UP)
 
     def navUpReleased(self):
-        self.send_message(pan_stop)
+        self.send_message(PAN_STOP)
 
     def navUpLeftPressed(self):
-        self.send_message(pan_up_left)
+        self.send_message(PAN_UP_LEFT)
 
     def navUpLeftReleased(self):
-        self.send_message(pan_stop)
+        self.send_message(PAN_STOP)
 
     def navLeftPressed(self):
-        self.send_message(pan_left)
+        self.send_message(PAN_LEFT)
 
     def navLeftReleased(self):
-        self.send_message(pan_stop)
+        self.send_message(PAN_STOP)
 
     def navDownLeftPressed(self):
-        self.send_message(pan_down_left)
+        self.send_message(PAN_DOWN_LEFT)
 
     def navDownLeftReleased(self):
-        self.send_message(pan_stop)
+        self.send_message(PAN_STOP)
 
     def navDownPressed(self):
-        self.send_message(pan_down)
+        self.send_message(PAN_DOWN)
 
     def navDownReleased(self):
-        self.send_message(pan_stop)
+        self.send_message(PAN_STOP)
 
     def navDownRightPressed(self):
-        self.send_message(pan_down_right)
+        self.send_message(PAN_DOWN_RIGHT)
 
     def navDownRightReleased(self):
-        self.send_message(pan_stop)
+        self.send_message(PAN_STOP)
 
     def navRightPressed(self):
-        self.send_message(pan_right)
+        self.send_message(PAN_RIGHT)
 
     def navRightReleased(self):
-        self.send_message(pan_stop)
+        self.send_message(PAN_STOP)
 
     def navUpRightPressed(self):
-        self.send_message(pan_up_right)
+        self.send_message(PAN_UP_RIGHT)
 
     def navUpRightReleased(self):
-        self.send_message(pan_stop)
+        self.send_message(PAN_STOP)
 
     def preset1(self):
         self.memory_recall_function(1)
@@ -222,32 +270,46 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
     def memory_recall_function(self, memory_number):
-        message_string = memory_recall.replace('p', str(memory_number))
-        self.send_message(information_display_off) # otherwise we see a message on the camera output
-        sleep(0.25)
+        message_string = MEMORY_RECALL.replace('p', str(memory_number))
         message = self.send_message(message_string)
-        sleep(1)
-        self.send_message(information_display_off)
         return message
 
     def send_message(self, message_string):
-        global sequence_number
-        #global received_message
+        global SEQUENCE_NUMBER
+
+        message_string = message_string.replace('VV', str(MOVEMENT_SPEED).zfill(2)).replace('WW', str(MOVEMENT_SPEED).zfill(2))
+
         payload_type = bytearray.fromhex('01 00')
         payload = bytearray.fromhex(message_string)
         payload_length = len(payload).to_bytes(2, 'big')
-        message = payload_type + payload_length + sequence_number.to_bytes(4, 'big') + payload
-        sequence_number += 1
-        s.sendto(message, (camera_ip, camera_port))
+        message = payload_type + payload_length + SEQUENCE_NUMBER.to_bytes(4, 'big') + payload
+        SEQUENCE_NUMBER += 1
+        print(message)
 
+        try:
+            data = message
+            hostAddress = QtNetwork.QHostAddress(str(self.cmbCameras.currentText()))
+            self.udpSocket.writeDatagram(data, hostAddress, CAMERA_PORT)
+        except:
+            print("error")
+
+    def reset_sequence_number_function(self):
+        global SEQUENCE_NUMBER
+        RESET_SEQUENCE_NUMBER_MESSAGE = bytearray.fromhex('02 00 00 01 00 00 00 01 01')
+        try:
+            data = RESET_SEQUENCE_NUMBER_MESSAGE
+            hostAddress = QtNetwork.QHostAddress(str(self.cmbCameras.currentText()))
+            self.udpSocket.writeDatagram(data, hostAddress, CAMERA_PORT)
+        except:
+            print("error")
+
+        SEQUENCE_NUMBER = 1
+        return SEQUENCE_NUMBER
 
 
 if __name__ == '__main__':
-
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle("Fusion")
-
     window = MainWindow()
     window.show()
-
     sys.exit(app.exec_())
