@@ -1,0 +1,5 @@
+<cameras>
+    <camera ip="10.100.117.40"/>
+    <camera ip="10.100.117.41"/>
+    <camera ip="127.0.0.1"/>
+</cameras>
