@@ -124,8 +124,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-*.bat
--ui.bat
-*.ui
 build/
 dist/
+
+*.bat
+rebuild-ui.bat
+*.ui
